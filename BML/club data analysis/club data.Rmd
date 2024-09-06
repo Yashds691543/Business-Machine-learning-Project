@@ -1,0 +1,96 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+Q1 Solution
+```{r}
+
+
+
+mydata <- read.csv("/Users/vamshikrishna/HW5/Lending_Club_Dataset.csv")
+mydata <- na.omit(mydata)
+mydata$loan_status <- ifelse(mydata$loan_status == "Fully Paid", 1, 0)
+mydata$home_ownership <- factor(mydata$home_ownership, levels = c("RENT", "MORTGAGE", "OWN"), labels = c(0, 1, 2))
+mydata$term <- as.numeric(gsub(" months", "", mydata$term))
+mydata$int_rate <- as.numeric(gsub("%", "", mydata$int_rate))
+```
+
+
+Q2 Solution
+```{r}
+set.seed(123) 
+trainIndex <- sample(1:nrow(mydata), 0.7*nrow(mydata))
+
+trainData <- mydata[trainIndex, ]
+testData <- mydata[-trainIndex, ]
+
+response.test <- testData$loan_status
+testData$loan_status <- NULL
+```
+
+
+Q3 Solution
+```{r}
+model <- glm(loan_status ~ loan_amnt + funded_amnt + int_rate + term + annual_inc + dti + delinq_2yrs, data = trainData, family = "binomial")
+summary(model)
+```
+
+
+
+Q4 Solution
+```{r}
+
+predictions_prob <- predict(model, newdata = testData, type = "response")
+predictions <- ifelse(predictions_prob > 0.5, 1, 0)
+
+comparison_table <- table(Predicted = predictions, Actual = response.test)
+
+precision <- comparison_table[2,2] / sum(comparison_table[2,])
+recall <- comparison_table[2,2] / sum(comparison_table[,2])
+accuracy <- sum(diag(comparison_table)) / sum(comparison_table)
+list(precision = precision, recall = recall, accuracy = accuracy)
+print(paste("Precision:", precision))
+print(paste("Recall:", recall))
+print(paste("Accuracy:", accuracy))
+
+```
+
+Q5 Solution
+```{r}
+library(caret)
+library(pROC)
+
+mydata$loan_status <- factor(mydata$loan_status, levels = c("0", "1"), labels = c("Charged_Off", "Fully_Paid"))
+
+
+trainControl <- trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+
+modelCV <- train(loan_status ~ loan_amnt + funded_amnt + int_rate + term + annual_inc + dti + delinq_2yrs, 
+                 data = mydata, method = "glm", trControl = trainControl, preProcess = c("center", "scale"), 
+                 metric = "ROC")
+
+
+conf_mat <- confusionMatrix(predict(modelCV, mydata), mydata$loan_status)
+
+
+accuracy <- conf_mat$overall["Accuracy"]
+precision <- conf_mat$byClass["Pos Pred Value"]
+recall <- conf_mat$byClass["Sensitivity"]
+
+
+roc_curve <- roc(response = as.numeric(mydata$loan_status) - 1, predictor = predict(modelCV, mydata, type = "prob")[,1])
+auc_value <- auc(roc_curve)
+
+print(paste("Accuracy:", accuracy))
+print(paste("Precision:", precision))
+print(paste("Recall", recall))
+print(paste("AUC score:", auc_value))
+
+```
+
+
+
+

@@ -1,0 +1,153 @@
+---
+title: "Untitled"
+output:
+  pdf_document: default
+  word_document: default
+date: "2024-03-21"
+---
+
+
+```{r}
+library(readr)
+library(caret)
+
+# Load the dataset
+mydata <- read.csv("/Users/yashds/Downloads/BML2/HW4/heart.csv")
+missing_values <- sum(is.na(mydata))
+print(paste("Number of missing values:", missing_values))
+mydata <- na.omit(mydata)
+set.seed(42)
+train_index <- createDataPartition(mydata$target, p = 0.7, list = FALSE)
+
+```
+```{r}
+library(rpart)
+library(rpart.plot)
+library(caret)
+
+
+train_data <- mydata[train_index, ]
+test_data <- mydata[-train_index, ]
+
+# Convert variables to factors as needed
+levels(train_data$target) <- make.names(levels(factor(train_data$target)))
+train_data$sex <- as.factor(train_data$sex)
+train_data$exang <- as.factor(train_data$exang)
+train_data$target <- as.factor(train_data$target)
+
+test_data$sex <- as.factor(test_data$sex)
+test_data$exang <- as.factor(test_data$exang)
+test_data$target <- as.factor(test_data$target)
+
+# Build the decision tree model
+tree_model <- rpart(target ~ sex + cp + trestbps + chol + fbs, data = train_data, method = "class")
+
+# Visualize the decision tree
+rpart.plot(tree_model)
+
+# Predict using the test set
+predictions <- predict(tree_model, test_data, type = "class")
+
+# Calculate precision, recall, and overall accuracy
+confusion <- confusionMatrix(predictions, test_data$target)
+precision <- confusion$byClass["Precision"]
+recall <- confusion$byClass["Recall"]
+accuracy <- confusion$overall["Accuracy"]
+
+# Print results
+print(paste("Precision:", precision))
+print(paste("Recall:", recall))
+print(paste("Accuracy:", accuracy))
+
+```
+
+```{r}
+str(mydata)
+```
+
+
+```{r}
+
+# Define the control parameters for 10-fold cross-validation
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Train the decision tree model using 10-fold cross-validation
+model_cv <- train(target ~ sex + cp + trestbps + chol + fbs, 
+                  data = mydata, 
+                  method = "rpart", 
+                  trControl = ctrl)
+
+# Print the results
+print(model_cv)
+
+
+
+```
+
+
+```{r}
+# Define control parameters for 10-fold cross-validation
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Define models
+models <- c("Naive Bayes" = "naive_bayes",
+            "SVM (RBF Kernel)" = "svmRadial",
+            "KNN" = "knn",
+            "Random Forest" = "rf")
+
+# Train models using 10-fold cross-validation
+results <- lapply(models, function(model) {
+  train(target ~ sex + cp + trestbps + chol + fbs, 
+        data = mydata, 
+        method = model, 
+        trControl = ctrl)
+})
+
+# Extract accuracy results
+
+
+# Print accuracy results
+
+
+```
+
+
+
+```{r}
+library(caret)
+
+# Define control parameters for repeated cross-validation
+ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+# Define models
+models <- c("Bagged Decision Tree" = "treebag",
+            "Random Forest" = "rf")
+
+# Train bagging models using tenfold cross-validation repeated three times
+bagging_results <- lapply(models, function(model) {
+  train(target ~ sex + cp + trestbps + chol + fbs, 
+        data = mydata, 
+        method = model, 
+        trControl = ctrl)
+})
+
+# Extract accuracy results for bagging models
+bagging_accuracy <- sapply(bagging_results, function(model) {
+  mean(model$results$Accuracy)
+})
+
+# Print accuracy results for bagging models
+print(bagging_accuracy)
+
+# Train boosting method using "gbm"
+boosting_model <- train(target ~ sex + cp + trestbps + chol + fbs, 
+                        data = mydata, 
+                        method = "gbm", 
+                        trControl = ctrl)
+
+# Print accuracy result for boosting method
+boosting_accuracy <- mean(boosting_model$results$Accuracy)
+print(boosting_accuracy)
+
+```
+

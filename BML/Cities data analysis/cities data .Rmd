@@ -1,0 +1,78 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+
+
+
+```{r}
+
+library(tm)
+
+
+path <- "/Users/yashds/Documents/BML2/HW6/All_Cities_Extracted_Data.txt"
+
+data <- readLines(path, warn = FALSE)
+Comments_Text <- unlist(strsplit(data, "\n"))
+comments_corpus <- Corpus(VectorSource(Comments_Text))
+```
+
+```{r}
+
+comments_corpus <- tm_map(comments_corpus, content_transformer(tolower))  # Convert to lowercase
+comments_corpus <- tm_map(comments_corpus, removePunctuation)  # Remove punctuation
+comments_corpus <- tm_map(comments_corpus, removeNumbers)  # Remove numbers
+comments_corpus <- tm_map(comments_corpus, removeWords, stopwords("english"))  # Remove common English stopwords
+comments_corpus <- tm_map(comments_corpus, stripWhitespace)  # Remove extra whitespaces
+comments_corpus <- tm_map(comments_corpus, stemDocument)  # Apply stemming
+
+
+dtm <- DocumentTermMatrix(comments_corpus)
+dtm
+tdm <- TermDocumentMatrix(comments_corpus)
+tdm
+
+
+```
+
+
+```{r}
+
+library(topicmodels)
+lda_model <- LDA(dtm, k = 4) #4 topics of LDA
+n_terms <- terms(lda_model, 5) #5 terms in each topic
+print(n_terms)
+```
+
+```{r}
+
+library(SentimentAnalysis)
+sent_words<-analyzeSentiment(tdm)
+sent_words
+
+```
+
+```{r}
+
+library(udpipe)
+library(word2vec)
+model_bow <- word2vec(x = Comments_Text, type = "cbow", dim = 20, iter = 20)
+similar_terms <- predict(model_bow, newdata = c("guest", "host"), type = "nearest", top_n = 5)
+print(similar_terms)
+```
+
+```{r}
+#Q5
+model_skipgr <- word2vec(x = Comments_Text, type = "skip-gram", dim = 20, iter = 20)
+similar_terms_skpgr <- predict(model_skipgr, newdata = c("airbnb", "help"), type = "nearest", top_n = 5)
+similar_terms_skpgr
+```
+
+```{r}
+tinytex::tlmgr_install("framed")
+
+```
+

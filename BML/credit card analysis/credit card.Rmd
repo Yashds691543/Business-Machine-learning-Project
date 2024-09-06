@@ -1,0 +1,137 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+rm(list = ls())
+credit_card_data <- read.csv("/Users/yashds/Downloads/BML2/Homework2/Credit_Card_Customer_Data.csv")
+attach(credit_card_data)
+```
+
+
+
+Exploration of what variables it contains and what the values look like and finding the Customer Key value for the customer who has the highest average credit limit
+
+```{r}
+str(credit_card_data)
+summary(credit_card_data)
+Customer_Key_Value_With_Highest_Avg_Credit_Limit <- credit_card_data[which.max(credit_card_data$Avg_Credit_Limit), "Customer_Key"]
+print(Customer_Key_Value_With_Highest_Avg_Credit_Limit)
+```
+```{r}
+
+str(credit_card_data)
+summary(credit_card_data)
+Customer_Key_Value_With_Highest_Avg_Credit_Limit <- credit_card_data[which.max(credit_card_data$Avg_Credit_Limit), "Customer_Key"]
+print(Customer_Key_Value_With_Highest_Avg_Credit_Limit)
+```
+
+
+
+
+The customerkey value with highest average credit limit is 33837.
+
+```{r}
+
+data_subset <- credit_card_data[, !(names(credit_card_data) %in% c("Sl_No", "Customer_Key"))]
+kmeans_result <- kmeans(data_subset, centers = 2)
+credit_card_data$cluster <- kmeans_result$cluster
+library(ggplot2)
+ggplot(credit_card_data, aes(x = Total_Credit_Cards, y = Avg_Credit_Limit, color = factor(cluster))) +
+ geom_point() + labs(x = "Total Credit Cards", y = "Average Credit Limit", color = "Cluster") + scale_color_discrete(name = "Cluster") + theme_minimal()
+```
+```{r}
+
+data_subset <- credit_card_data[, !(names(credit_card_data) %in% c("Sl_No", "Customer_Key"))]
+kmeans_result <- kmeans(data_subset, centers = 2)
+credit_card_data$cluster <- kmeans_result$cluster
+library(ggplot2)
+ggplot(credit_card_data, aes(x = Total_Credit_Cards, y = Avg_Credit_Limit, color = factor(cluster))) +
+geom_point() +   labs(x = "Total Credit Cards", y = "Average Credit Limit", color = "Cluster") + scale_color_discrete(name = "Cluster") +   theme_minimal()
+
+```
+```{r}
+
+data_subset <- credit_card_data[, !(names(credit_card_data) %in% c("Sl_No", "Customer_Key"))]
+kmeans_result <- kmeans(data_subset, centers = 2)
+credit_card_data$cluster <- kmeans_result$cluster
+library(ggplot2)
+ggplot(credit_card_data, aes(x = Total_Credit_Cards, y = Avg_Credit_Limit, color = factor(cluster))) +
+geom_point() +
+     labs(x = "Total Credit Cards", y = "Average Credit Limit", color = "Cluster") +
+     scale_color_discrete(name = "Cluster") +
+     theme_minimal()
+
+
+```
+
+
+
+
+
+From the above graph we can see two different clusters when K = 2. The clusters are formed based on the similarity of the customers' total credit cards and average credit limits.
+It appears that customers with higher total credit cards and average credit limits tend to belong to one cluster, while customers with lower total credit cards and average credit limits belong to the other cluster.
+We can also see that there is some overlap between the clusters, especially for customers with moderate values of total credit cards and average credit limits.
+
+```{r}
+
+kmeans_result <- kmeans(data_subset, centers = 3)
+credit_card_data$cluster <- kmeans_result$cluster
+ggplot(credit_card_data, aes(x = Total_Credit_Cards, y = Avg_Credit_Limit, color = factor(cluster))) +
+    geom_point() +
+     labs(x = "Total Credit Cards", y = "Average Credit Limit", color = "Cluster") +
+     scale_color_discrete(name = "Cluster") +
+     theme_minimal()
+
+```
+
+
+
+From the above graph when K = 3, we can see the similar pattern as we observed in the graph when K = 2. The only difference we observed is that there are 3 clusters in the graph when K = 3.
+
+```{r}
+
+data_subset <- credit_card_data[, !(names(credit_card_data) %in% c("Sl_No", "Customer_Key"))]
+library(kohonen)
+ scaled_data <- scale(data_subset)
+ som_grid <- somgrid(xdim = 1, ydim = 2, topo = "rectangular")
+ som_model <- som(scaled_data, grid = som_grid)
+ plot(som_model, type = "codes", pchs = 20, main = "SOM Clustering (K=2)")
+
+```
+
+I see that organization of the clusters is totally different in SOM clustering when compared to K-means clustering. SOM arranges the clusters in a 2D grid with neighboring units representing similar clusters but the K-means clustering clusters the data into distinct clusters.
+One of the advantage of SOM is that it considers the topology of the data which helps in capturing the non-linear relationships between the variables.
+
+```{r}
+input_data <- credit_card_data[, c("Total_Credit_Cards", "Total_visits_bank", "Total_visits_online", "Total_calls_made")]
+wcss <- numeric(length = 5)
+ for (k in 2:6) {
+     kmeans_model <- kmeans(input_data, centers = k)
+     wcss[k - 1] <- kmeans_model$tot.withinss
+ }
+ plot(2:6, wcss, type = "b", pch = 19, frame = FALSE, 
+      xlab = "Number of Clusters (K)", ylab = "Within-Cluster Sum of Squares (WCSS)",
+      main = "Elbow Method for Optimal K")
+```
+
+From the above graph, the value of WCSS is decreasing gradually from the point K = 3 with respect to the number of clusters by using Elbow's method. So the optimal K-Value is 3.
+
+
+```{r}
+library(cluster)
+ input_data <- credit_card_data[, c("Total_Credit_Cards", "Total_visits_bank", "Total_visits_online", "Total_calls_made")]
+
+ silhouette_scores <- numeric(length = 5)
+ for (k in 2:6) {
+     kmeans_model <- kmeans(input_data, centers = k)
+     sil_var <- silhouette(kmeans_model$cluster, dist(input_data))
+     silhouette_scores[k - 1] <- mean(sil_var[,3])
+ }
+ plot(2:6, silhouette_scores, type = "b", pch = 19, frame = FALSE,
+      xlab = "Number of Clusters (K)", ylab = "Average Silhouette Width",
+      main = "Silhouette Method for Optimal K")
+	  
+```
+From the above graph, the average silhouette width is decreasing from the value of K = 3 with respect to number of clusters. So, by using the Silhouette method we can say that the optimal value of the K is 3.

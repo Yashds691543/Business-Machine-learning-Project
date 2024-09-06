@@ -1,0 +1,90 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+library(dplyr)
+data_input <- read.csv("/Users/yashds/Downloads/BML2/HW3/survey.csv")
+```
+
+```{r}
+data_input <- data_input %>%
+  filter(Age >= 18) %>%
+  mutate(age_cat = cut(Age, breaks = c(0, 20, 30, 40, 50, 60, Inf),
+                       labels = c("under 21", "21-30", "31-40", "41-50", "51-60", "61 and Over")))
+summary(data_input$age_cat)
+```
+
+```{r}
+data_input <- data_input %>%
+  mutate_at(vars(c("Gender", "Country", "state", "family_history", "treatment", 
+                   "work_interfere", "remote_work", "tech_company", "benefits", 
+                   "care_options", "wellness_program", "seek_help", "anonymity", "leave", "mental_health_consequence",
+                   "phys_health_consequence", "coworkers", "supervisor", "mental_health_interview",
+                   "phys_health_interview", "mental_vs_physical", "obs_consequence" )), as.factor)
+data_person <- data_input %>%
+  select(age_cat, Gender, family_history, treatment, tech_company, benefits, 
+         care_options, work_interfere, remote_work, seek_help, 
+         mental_health_consequence, phys_health_consequence)
+data_person <- na.omit(data_person)
+write.csv(data_person, "/Users/yashds/Downloads/BML2/HW3/data_factor.csv", row.names = FALSE)
+
+```
+
+
+
+```{r}
+library(arules)
+library(arulesViz)
+
+rules <- apriori(data_person, parameter = list(support = 0.1, confidence = 0.8))
+rules_support <- sort(rules, by = "support", decreasing = TRUE)[1:10]
+rules_confidence <- sort(rules, by = "confidence", decreasing = TRUE)[1:10]
+rules_lift <- sort(rules, by = "lift", decreasing = TRUE)[1:10] 
+inspect(rules_support)
+inspect(rules_confidence)
+inspect(rules_lift)
+```
+
+
+
+```{r}
+
+rules_treatment <- apriori(data_person, parameter = list(support = 0.1, confidence = 0.8), 
+                           appearance = list(rhs = "treatment=Yes"))
+rules_support_treatment <- sort(rules_treatment, by = "support", decreasing = TRUE)[1:10]
+rules_confidence_treatment <- sort(rules_treatment, by = "confidence", decreasing = TRUE)[1:10]
+rules_lift_treatment <- sort(rules_treatment, by = "lift", decreasing = TRUE)[1:10]
+inspect(rules_support_treatment)
+inspect(rules_confidence_treatment)
+inspect(rules_lift_treatment)
+```
+
+```{r}
+transactions <- as(data_person, "transactions")
+rules_eclat <- eclat(transactions, parameter = list(support = 0.1))
+rules_eclat_induced <- ruleInduction(rules_eclat, transactions, confidence = 0.8)
+rules_eclat_sorted <- sort(rules_eclat_induced, by = "confidence", decreasing = TRUE)
+rules_eclat_sorted_t10<- sort(rules_eclat_induced, by = "confidence", decreasing = TRUE)[1:10]
+inspect(rules_eclat_sorted_t10)
+rhs_items <- rhs(rules_eclat_sorted)
+rhs_counts <- as(rhs_items, "list") %>% unlist() %>% table()
+mc_rhs <- sort(rhs_counts, decreasing = TRUE)[1]
+print(mc_rhs)
+
+``` 
+
+```{r}
+transactions_treatment_yes <- subset(transactions, items %in% "treatment=Yes")
+rules_eclat_treatment_yes <- eclat(transactions_treatment_yes, parameter = list(support = 0.1))
+rules_eclat_induced_treatment_yes <- ruleInduction(rules_eclat_treatment_yes, transactions_treatment_yes, 
+                                                   confidence = 0.8)
+
+```
+
+```{r}
+top_10_rules_confidence <- head(sort(rules_eclat_induced_treatment_yes, by = "confidence", decreasing = TRUE), 10)
+inspect(top_10_rules_confidence)
+```
+
